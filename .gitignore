@@ -1,0 +1,7 @@
+.dart_tool/
+.tmp/
+build/
+pubspec.lock
+test/fixtures/fonts/
+test/fixtures/kitty_graphics/test_image.png
+test/rendering/goldens/
