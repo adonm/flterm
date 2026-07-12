@@ -344,6 +344,16 @@ void main() {
 
         expect(binding.mouseTracking, MouseTracking.normal);
       });
+
+      test('reflects SGR-pixel coordinate mode', () {
+        expect(binding.sgrPixelMouse, isFalse);
+
+        writeUtf8(controller.terminal, '\x1b[?1016h');
+        expect(binding.sgrPixelMouse, isTrue);
+
+        writeUtf8(controller.terminal, '\x1b[?1016l');
+        expect(binding.sgrPixelMouse, isFalse);
+      });
     });
 
     group('cursorBlinks', () {

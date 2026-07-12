@@ -839,11 +839,12 @@ void main() {
     });
 
     group('mouse tracking', () {
-      void enableSgrMouse(String mode) {
+      void enableSgrMouse(String mode, {String format = '1006'}) {
         writeToTerminal(
           controller,
           '\x1b[?$mode'
-          'h\x1b[?1006h',
+          'h\x1b[?$format'
+          'h',
         );
         bindingFor(controller).handleResize(
           cols: 80,
@@ -954,6 +955,26 @@ void main() {
         await touch.up();
 
         expect(events, isEmpty);
+      });
+
+      testWidgets('touch emits left-button SGR-pixel input in mode 1016', (
+        tester,
+      ) async {
+        enableSgrMouse('1000', format: '1016');
+        expect(bindingFor(controller).sgrPixelMouse, isTrue);
+        final events = <Uint8List>[];
+        controller.onOutput = events.add;
+        await tester.pumpWidget(buildHandler(controller: controller));
+
+        final touch = await tester.startGesture(
+          const Offset(24, 16),
+          kind: .touch,
+        );
+        await touch.up();
+
+        expect(events, hasLength(2));
+        expect(utf8.decode(events[0]), '\x1b[<0;24;16M');
+        expect(utf8.decode(events[1]), '\x1b[<0;24;16m');
       });
 
       testWidgets('wheel reports its pointer position', (tester) async {

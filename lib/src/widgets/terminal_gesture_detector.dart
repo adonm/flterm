@@ -154,8 +154,10 @@ class _TerminalGestureDetectorState extends State<TerminalGestureDetector> {
   void _handleDragStart(DragStartDetails details) {
     _binding.requestFocus();
     _cancelLinkPress();
-    if (details.kind != .touch &&
-        _isMouseTracked(HardwareKeyboard.instance.isShiftPressed)) {
+    if (_isPointerTracked(
+      details.kind ?? .mouse,
+      HardwareKeyboard.instance.isShiftPressed,
+    )) {
       return;
     }
     if (!widget.settings.dragSelection) {
@@ -176,6 +178,10 @@ class _TerminalGestureDetectorState extends State<TerminalGestureDetector> {
 
   void _handleLongPressStart(LongPressStartDetails details) {
     _binding.requestFocus();
+    if (_isPointerTracked(.touch, false)) {
+      _cancelSelectionPress();
+      return;
+    }
     if (!widget.settings.longPressSelection) {
       _cancelSelectionPress();
       return;
@@ -201,8 +207,10 @@ class _TerminalGestureDetectorState extends State<TerminalGestureDetector> {
 
   void _handleTapDown(TapDownDetails details) {
     _binding.requestFocus();
-    if (details.kind != .touch &&
-        _isMouseTracked(HardwareKeyboard.instance.isShiftPressed)) {
+    if (_isPointerTracked(
+      details.kind ?? .mouse,
+      HardwareKeyboard.instance.isShiftPressed,
+    )) {
       return;
     }
     if (widget.links.handlePress(
@@ -228,17 +236,21 @@ class _TerminalGestureDetectorState extends State<TerminalGestureDetector> {
       if (link != null) widget.onLinkActivate?.call(link);
       return;
     }
-    if (details.kind != .touch &&
-        _pressCell == null &&
-        _isMouseTracked(HardwareKeyboard.instance.isShiftPressed)) {
+    if (_pressCell == null &&
+        _isPointerTracked(
+          details.kind,
+          HardwareKeyboard.instance.isShiftPressed,
+        )) {
       return;
     }
     _releaseSelectionPress(widget.metrics.cellAt(details.localPosition));
   }
 
   void _handleTrackedDown(PointerDownEvent event) {
-    if (event.kind == .touch ||
-        !_isMouseTracked(HardwareKeyboard.instance.isShiftPressed)) {
+    if (!_isPointerTracked(
+      event.kind,
+      HardwareKeyboard.instance.isShiftPressed,
+    )) {
       return;
     }
     final button = _mouseButton(event.buttons);
@@ -247,8 +259,10 @@ class _TerminalGestureDetectorState extends State<TerminalGestureDetector> {
   }
 
   void _handleTrackedMove(PointerMoveEvent event) {
-    if (event.kind == .touch ||
-        !_isMouseTracked(HardwareKeyboard.instance.isShiftPressed)) {
+    if (!_isPointerTracked(
+      event.kind,
+      HardwareKeyboard.instance.isShiftPressed,
+    )) {
       return;
     }
     _sendMouseEvent(
@@ -259,14 +273,12 @@ class _TerminalGestureDetectorState extends State<TerminalGestureDetector> {
   }
 
   void _handleTrackedUp(PointerUpEvent event) {
-    if (event.kind == .touch) return;
     final button = _trackedButtons.remove(event.pointer);
     if (button == null) return;
     _sendMouseEvent(.release, event.localPosition, button: button);
   }
 
   void _handleTrackedCancel(PointerCancelEvent event) {
-    if (event.kind == .touch) return;
     final button = _trackedButtons.remove(event.pointer);
     if (button == null) return;
     _sendMouseEvent(.release, event.localPosition, button: button);
@@ -318,6 +330,11 @@ class _TerminalGestureDetectorState extends State<TerminalGestureDetector> {
     return _binding.mouseTracking != .none &&
         !shift &&
         !_binding.virtualMods.hasShift;
+  }
+
+  bool _isPointerTracked(PointerDeviceKind kind, bool shift) {
+    if (!_isMouseTracked(shift)) return false;
+    return kind != .touch || _binding.sgrPixelMouse;
   }
 
   void _releaseSelectionPress([Position? cell]) {

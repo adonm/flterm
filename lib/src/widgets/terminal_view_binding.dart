@@ -23,6 +23,9 @@ abstract interface class TerminalViewBinding {
   /// Current mouse tracking mode.
   MouseTracking get mouseTracking;
 
+  /// Whether DEC 1016 SGR-pixel mouse coordinates are active.
+  bool get sgrPixelMouse;
+
   /// Current IME preedit text that has not been committed to the terminal.
   String get preeditText;
 
