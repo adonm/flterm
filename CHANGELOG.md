@@ -13,6 +13,9 @@
 
 - **Terminal links**: `TerminalView.linkSettings` detects OSC 8 links,
   text URLs, file paths, and custom regex links.
+- **Accessibility semantics**: `TerminalView` exposes visible, non-concealed
+  terminal text and terminal-focus actions to assistive technologies, with
+  customizable labels and hints.
 - **Controller APIs**: `selectRange`, `hasSelection`, `pwd`, and
   `onPwdChanged` expose selection and working-directory state.
 - **Glyph Protocol**: `TerminalConfig.glyphProtocol` toggles Glyph Protocol

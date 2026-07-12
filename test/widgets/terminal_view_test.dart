@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart'
         defaultTargetPlatform;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libghostty/libghostty.dart' hide KeyEvent;
@@ -134,6 +135,8 @@ void main() {
       MouseAutoHide mouseAutoHide = .onInput,
       TerminalGestureSettings gestureSettings = const TerminalGestureSettings(),
       LinkSettings linkSettings = const LinkSettings(),
+      String? semanticsLabel = 'Terminal',
+      String? semanticsHint = 'Activate to focus terminal input',
       EdgeInsets padding = EdgeInsets.zero,
       double width = 800,
       double height = 480,
@@ -152,6 +155,8 @@ void main() {
               mouseAutoHide: mouseAutoHide,
               gestureSettings: gestureSettings,
               linkSettings: linkSettings,
+              semanticsLabel: semanticsLabel,
+              semanticsHint: semanticsHint,
               padding: padding,
             ),
           ),
@@ -240,6 +245,53 @@ void main() {
     testWidgets('renders with controller', (tester) async {
       await tester.pumpWidget(wrapInApp(controller: controller));
       expect(find.byType(TerminalView), findsOneWidget);
+    });
+
+    testWidgets('semantics expose visible non-concealed terminal text', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(
+          wrapInApp(
+            controller: controller,
+            semanticsLabel: 'Remote shell',
+            semanticsHint: 'Focus remote shell input',
+          ),
+        );
+        await tester.pumpAndSettle();
+        writeUtf8(controller, 'visible\r\nshow \x1b[8msecret\x1b[0m text');
+        await tester.pump();
+        await tester.pump();
+
+        final node = tester.getSemantics(find.bySemanticsLabel('Remote shell'));
+        final data = node.getSemanticsData();
+        expect(data.label, 'Remote shell');
+        expect(data.value, contains('visible'));
+        expect(data.value, contains('show'));
+        expect(data.value, contains('text'));
+        expect(data.value, isNot(contains('secret')));
+        expect(data.hint, 'Focus remote shell input');
+        expect(data.hasAction(SemanticsAction.tap), isTrue);
+        expect(data.hasAction(SemanticsAction.focus), isTrue);
+        expect(data.flagsCollection.isLiveRegion, isFalse);
+      } finally {
+        semantics.dispose();
+      }
+    });
+
+    testWidgets('semantics can be delegated to an embedding application', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(
+          wrapInApp(controller: controller, semanticsLabel: null),
+        );
+        expect(find.bySemanticsLabel('Terminal'), findsNothing);
+      } finally {
+        semantics.dispose();
+      }
     });
 
     testWidgets('creates an isolated render cache without explicit scope', (

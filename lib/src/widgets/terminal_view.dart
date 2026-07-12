@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../foundation.dart';
@@ -12,6 +14,7 @@ import 'terminal_controller.dart';
 import 'terminal_gesture_detector.dart';
 import 'terminal_scope.dart';
 import 'terminal_scroll_controller.dart';
+import 'terminal_semantics_snapshot.dart';
 import 'terminal_shortcut_scope.dart';
 import 'terminal_view_binding.dart';
 
@@ -94,6 +97,15 @@ class TerminalView extends StatefulWidget {
   /// Ctrl+C/V/A/K on Windows.
   final Map<ShortcutActivator, Intent>? shortcuts;
 
+  /// Accessibility label for the terminal semantics node.
+  ///
+  /// Set to null to omit flterm's semantics node when an embedding application
+  /// provides an equivalent accessible terminal surface.
+  final String? semanticsLabel;
+
+  /// Accessibility hint for focusing terminal input.
+  final String? semanticsHint;
+
   /// Raw TTF/OTF font file bytes for exact metric extraction.
   ///
   /// When provided, takes priority over automatic font resolution. The
@@ -115,6 +127,8 @@ class TerminalView extends StatefulWidget {
     this.shortcuts,
     this.scrollPhysics,
     this.scrollController,
+    this.semanticsLabel = 'Terminal',
+    this.semanticsHint = 'Activate to focus terminal input',
     this.autofocus = false,
     this.showKeyboard = true,
     this.padding = const .all(8),
@@ -135,6 +149,8 @@ class _TerminalViewState extends State<TerminalView> {
   late TerminalScrollController _scrollController;
   final _links = LinkInteraction();
   final _rendererKey = GlobalKey();
+  final _semantics = TerminalSemanticsSnapshot();
+  final _semanticsUpdates = _TerminalSemanticsNotifier();
 
   Uint8List? _resolvedFontData;
   var _ownsFocusNode = false;
@@ -185,8 +201,10 @@ class _TerminalViewState extends State<TerminalView> {
 
     if (widget.controller != oldWidget.controller) {
       oldWidget.controller.removeListener(_onControllerChanged);
+      _binding.terminal.removeListener(_notifySemanticsChanged);
       _binding.detach();
       _binding = _asBinding(_controller);
+      _binding.terminal.addListener(_notifySemanticsChanged);
       _binding.brightness = _themeBrightness;
       _binding.attach(_focusNode, _scrollController);
       _controller.addListener(_onControllerChanged);
@@ -241,11 +259,17 @@ class _TerminalViewState extends State<TerminalView> {
   @override
   void dispose() {
     _blinkTimer?.cancel();
+    SemanticsBinding.instance.removeSemanticsEnabledListener(
+      _handleSemanticsEnabledChanged,
+    );
     _controller.removeListener(_onControllerChanged);
+    _binding.terminal.removeListener(_notifySemanticsChanged);
     _binding.detach();
     if (_ownsFocusNode) _focusNode.dispose();
     _scrollController.removeListener(_onScrollChanged);
     if (_ownsScrollController) _scrollController.dispose();
+    _semantics.dispose();
+    _semanticsUpdates.dispose();
     super.dispose();
   }
 
@@ -253,7 +277,12 @@ class _TerminalViewState extends State<TerminalView> {
   void initState() {
     super.initState();
 
+    SemanticsBinding.instance.addSemanticsEnabledListener(
+      _handleSemanticsEnabledChanged,
+    );
+
     _binding = _asBinding(_controller);
+    _binding.terminal.addListener(_notifySemanticsChanged);
 
     _focusNode = widget.focusNode ?? FocusNode();
     _ownsFocusNode = widget.focusNode == null;
@@ -278,7 +307,7 @@ class _TerminalViewState extends State<TerminalView> {
   }
 
   Widget _build(BuildContext context, TerminalRenderCache cache) {
-    return GestureDetector(
+    final terminal = GestureDetector(
       behavior: .translucent,
       onTap: _controller.requestFocus,
       child: ColoredBox(
@@ -338,6 +367,42 @@ class _TerminalViewState extends State<TerminalView> {
         ),
       ),
     );
+    final semanticsLabel = widget.semanticsLabel;
+    if (semanticsLabel == null || !SemanticsBinding.instance.semanticsEnabled) {
+      return terminal;
+    }
+    return ListenableBuilder(
+      listenable: _semanticsUpdates,
+      child: terminal,
+      builder: (context, child) => Semantics(
+        container: true,
+        excludeSemantics: true,
+        label: semanticsLabel,
+        value: _semantics.visibleText(_binding.terminal),
+        hint: widget.semanticsHint,
+        focusable: true,
+        focused: _focusNode.hasFocus,
+        onTap: _controller.requestFocus,
+        onFocus: _controller.requestFocus,
+        child: child,
+      ),
+    );
+  }
+
+  void _handleSemanticsEnabledChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _notifySemanticsChanged() {
+    if (!SemanticsBinding.instance.semanticsEnabled) return;
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _semanticsUpdates.changed();
+      });
+      return;
+    }
+    _semanticsUpdates.changed();
   }
 
   MouseCursor _effectiveMouseCursor() {
@@ -516,4 +581,8 @@ class _TerminalViewState extends State<TerminalView> {
     );
     return controller as TerminalViewBinding;
   }
+}
+
+final class _TerminalSemanticsNotifier extends ChangeNotifier {
+  void changed() => notifyListeners();
 }

@@ -27,6 +27,9 @@ libghostty-vt engine.
   hyperlinks; fonts. Immutable and `lerp`-able.
 - Links for OSC 8 metadata, text URLs, file paths, and custom regex
   rules with activation callbacks.
+- Screen-reader semantics expose the visible viewport as text and provide an
+  action for focusing terminal input without announcing every output update as
+  a live region.
 
 ## Getting started
 
