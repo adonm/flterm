@@ -940,10 +940,10 @@ void main() {
         await mouse.removePointer();
       });
 
-      testWidgets('touch remains a local gesture while mouse is tracked', (
+      testWidgets('touch emits left-button SGR cell input when tracked', (
         tester,
       ) async {
-        enableSgrMouse('1000');
+        enableSgrMouse('1002');
         final events = <Uint8List>[];
         controller.onOutput = events.add;
         await tester.pumpWidget(buildHandler(controller: controller));
@@ -954,14 +954,15 @@ void main() {
         );
         await touch.up();
 
-        expect(events, isEmpty);
+        expect(events, hasLength(2));
+        expect(utf8.decode(events[0]), '\x1b[<0;4;2M');
+        expect(utf8.decode(events[1]), '\x1b[<0;4;2m');
       });
 
       testWidgets('touch emits left-button SGR-pixel input in mode 1016', (
         tester,
       ) async {
         enableSgrMouse('1000', format: '1016');
-        expect(bindingFor(controller).sgrPixelMouse, isTrue);
         final events = <Uint8List>[];
         controller.onOutput = events.add;
         await tester.pumpWidget(buildHandler(controller: controller));

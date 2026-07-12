@@ -140,10 +140,6 @@ class TerminalControllerImpl extends TerminalController
   MouseTracking get mouseTracking => _mouseTracking;
 
   @override
-  bool get sgrPixelMouse =>
-      terminal.modeGet(const TerminalMode.sgrPixelsMouse());
-
-  @override
   String get preeditText => _preeditText;
 
   @override
