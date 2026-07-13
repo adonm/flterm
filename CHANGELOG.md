@@ -26,6 +26,11 @@
 - **Rendering pipeline**: selection, cursor viewport state, and cell metadata
   use refreshed libghostty render snapshots.
 
+### Fixed
+
+- **Accessibility rendering**: terminal semantics no longer consume renderer
+  dirty state, and repeated accessibility updates are coalesced.
+
 ## 0.0.3
 
 ### Breaking

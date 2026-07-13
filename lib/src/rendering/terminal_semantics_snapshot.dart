@@ -1,14 +1,12 @@
 import 'package:libghostty/libghostty.dart';
 
-/// Reusable plain-text snapshot of the visible terminal viewport.
+/// Reusable plain-text view of an already-synchronized terminal render state.
 final class TerminalSemanticsSnapshot {
-  final _state = RenderState();
   final _rows = RowIterator();
   final _cells = CellIterator();
 
-  String visibleText(Terminal terminal) {
-    _state.update(terminal);
-    _rows.reset(_state);
+  String visibleText(RenderState state) {
+    _rows.reset(state);
     final output = StringBuffer();
 
     while (_rows.next()) {
@@ -30,6 +28,5 @@ final class TerminalSemanticsSnapshot {
   void dispose() {
     _cells.dispose();
     _rows.dispose();
-    _state.dispose();
   }
 }

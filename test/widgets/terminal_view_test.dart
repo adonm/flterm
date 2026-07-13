@@ -261,7 +261,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         writeUtf8(controller, 'visible\r\nshow \x1b[8msecret\x1b[0m text');
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
         await tester.pump();
 
         final node = tester.getSemantics(find.bySemanticsLabel('Remote shell'));
@@ -1012,6 +1012,38 @@ void main() {
 
       expect(controller.hasFocus, isFalse);
       expect(find.byType(TerminalView), findsOneWidget);
+    });
+
+    testWidgets('changing controller clears cached terminal semantics', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final controller2 = TerminalController();
+      addTearDown(controller2.dispose);
+      try {
+        writeUtf8(controller, 'old terminal');
+        await tester.pumpWidget(wrapInApp(controller: controller));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+        expect(
+          tester
+              .getSemantics(find.bySemanticsLabel('Terminal'))
+              .getSemanticsData()
+              .value,
+          contains('old terminal'),
+        );
+
+        await tester.pumpWidget(wrapInApp(controller: controller2));
+        expect(
+          tester
+              .getSemantics(find.bySemanticsLabel('Terminal'))
+              .getSemanticsData()
+              .value,
+          isEmpty,
+        );
+      } finally {
+        semantics.dispose();
+      }
     });
 
     testWidgets('changing scrollController keeps the view mounted', (

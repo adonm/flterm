@@ -12,6 +12,7 @@ import 'atlas/sprite_buffer.dart';
 import 'cell_content_resolver.dart';
 import 'codepoint_classification.dart';
 import 'paint_state.dart';
+import 'terminal_semantics_snapshot.dart';
 
 const _italicOverhangFontSizeFactor = 0.15;
 
@@ -180,6 +181,7 @@ class TerminalFrameBuilder {
   final CellIterator _cells;
   final SpriteBuffer _sprites;
   final RenderState _renderState;
+  final TerminalSemanticsSnapshot _semantics;
   final TerminalPaintState _state;
   final RowDirtyTracker _dirtyRows;
   final CellContentResolver _content;
@@ -190,6 +192,7 @@ class TerminalFrameBuilder {
   TerminalFrameBuilder(this._atlas, this._sprites, this._state)
     : _content = CellContentResolver(_atlas),
       _renderState = RenderState(),
+      _semantics = TerminalSemanticsSnapshot(),
       _rows = RowIterator(),
       _cells = CellIterator(),
       _dirtyRows = RowDirtyTracker() {
@@ -213,6 +216,7 @@ class TerminalFrameBuilder {
     _cells.dispose();
     _rows.dispose();
     _renderState.dispose();
+    _semantics.dispose();
   }
 
   /// Rebuilds every visible row on the next sync.
@@ -228,6 +232,8 @@ class TerminalFrameBuilder {
   /// Used when flterm-side state changes, such as focus or blink visibility,
   /// without a new terminal render state.
   void refreshCursorGlyph() => _cursorBuilder.refreshGlyph();
+
+  String semanticsText() => _semantics.visibleText(_renderState);
 
   /// Syncs terminal state into paint-ready buffers.
   void sync(
