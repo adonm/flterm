@@ -29,7 +29,10 @@
 ### Fixed
 
 - **Accessibility rendering**: terminal semantics no longer consume renderer
-  dirty state, and repeated accessibility updates are coalesced.
+  dirty state, repeated accessibility updates are coalesced, and semantics
+  follow the visible scrollback viewport.
+- **Renderer invalidation**: terminal size reports no longer consume dirty
+  state before the renderer synchronizes its frame.
 
 ## 0.0.3
 

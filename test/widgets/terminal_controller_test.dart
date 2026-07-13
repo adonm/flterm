@@ -8,6 +8,7 @@ import 'package:flterm/src/widgets/terminal_controller_impl.dart';
 import 'package:flterm/src/widgets/terminal_view_binding.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart' show EdgeInsets;
 import 'package:libghostty/libghostty.dart' hide KeyEvent;
 
 void main() {
@@ -45,6 +46,30 @@ void main() {
         expect(controller.selectedText(), '');
         expect(controller.hasFocus, isFalse);
       });
+    });
+
+    test('size query preserves renderer dirty state', () {
+      final renderState = RenderState();
+      final output = <Uint8List>[];
+      addTearDown(renderState.dispose);
+      controller.onOutput = output.add;
+      controller.handleResize(
+        cols: 91,
+        rows: 37,
+        metrics: const CellMetrics(cellWidth: 9, cellHeight: 18, baseline: 14),
+        padding: EdgeInsets.zero,
+        devicePixelRatio: 2,
+      );
+      renderState.update(controller.terminal);
+      renderState.dirty = DirtyState.clean;
+
+      writeControllerUtf8(controller, 'visible\x1b[18t\x1b[16t\x1b[14t');
+
+      expect(
+        utf8.decode(output.expand((chunk) => chunk).toList()),
+        '\x1b[8;37;91t\x1b[6;36;18t\x1b[4;1332;1638t',
+      );
+      expect(renderState.update(controller.terminal), isNot(DirtyState.clean));
     });
 
     group('sendText', () {

@@ -35,7 +35,6 @@ class TerminalControllerImpl extends TerminalController
 
   @override
   final Terminal terminal;
-  final _renderState = RenderState();
   final _keyEncoder = KeyEncoder();
   final _mouseEncoder = MouseEncoder();
   late final SelectionGestureDriver _selectionGesture;
@@ -79,6 +78,8 @@ class TerminalControllerImpl extends TerminalController
         maxScrollback: config.scrollbackLimit,
       ),
       super.base() {
+    _lastCols = config.cols;
+    _lastRows = config.rows;
     _selectionGesture = SelectionGestureDriver(terminal);
     installDefaultKittyPngDecoder();
     _textInput
@@ -259,7 +260,6 @@ class TerminalControllerImpl extends TerminalController
     _selectionGesture.dispose();
     _keyEncoder.dispose();
     _mouseEncoder.dispose();
-    _renderState.dispose();
     terminal.dispose();
     super.dispose();
   }
@@ -737,10 +737,8 @@ class TerminalControllerImpl extends TerminalController
   void _emitOutput(Uint8List bytes) => onOutput?.call(bytes);
 
   void _ensureGridSize() {
-    if (_lastRows > 0 && _lastCols > 0) return;
-    _renderState.update(terminal);
-    _lastRows = _renderState.rows;
-    _lastCols = _renderState.cols;
+    if (_lastRows <= 0) _lastRows = _config.rows;
+    if (_lastCols <= 0) _lastCols = _config.cols;
   }
 
   bool _extendSelection(LogicalKeyboardKey arrowKey) {
@@ -812,10 +810,10 @@ class TerminalControllerImpl extends TerminalController
   }
 
   TerminalSizeInfo _handleSizeQuery() {
-    _renderState.update(terminal);
+    _ensureGridSize();
     return TerminalSizeInfo(
-      rows: _renderState.rows,
-      columns: _renderState.cols,
+      rows: _lastRows,
+      columns: _lastCols,
       cellWidth: (_lastMetrics.cellWidth * _lastDevicePixelRatio).round(),
       cellHeight: (_lastMetrics.cellHeight * _lastDevicePixelRatio).round(),
     );

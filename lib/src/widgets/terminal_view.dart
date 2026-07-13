@@ -576,6 +576,7 @@ class _TerminalViewState extends State<TerminalView> {
   void _onScrollChanged() {
     _syncBlink();
     if (!_scrollController.hasClients) return;
+    if (_controller.activeScreen == .primary) _scheduleSemanticsUpdate();
     final cellHeight = _metrics.cellHeight;
     if (cellHeight <= 0) return;
     final pixels = _scrollController.position.pixels;

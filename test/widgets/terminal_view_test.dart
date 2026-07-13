@@ -419,6 +419,37 @@ void main() {
       expect(renderer(tester).blinkVisible, isFalse);
     });
 
+    testWidgets('semantics follow the visible scrollback viewport', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        final scrollController = await pumpBlinkingScrollableTerminal(tester);
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+
+        String semanticsValue() => tester
+            .getSemantics(find.bySemanticsLabel('Terminal'))
+            .getSemanticsData()
+            .value;
+
+        expect(semanticsValue(), contains('line 39'));
+
+        scrollController.jumpTo(0);
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+        expect(semanticsValue(), contains('line 0'));
+        expect(semanticsValue(), isNot(contains('line 39')));
+
+        scrollController.jumpTo(scrollController.position.maxScrollExtent);
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+        expect(semanticsValue(), contains('line 39'));
+      } finally {
+        semantics.dispose();
+      }
+    });
+
     testWidgets('text input produces output via onOutput', (tester) async {
       final output = <Uint8List>[];
       controller.onOutput = output.add;
