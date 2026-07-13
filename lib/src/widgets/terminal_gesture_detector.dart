@@ -188,6 +188,7 @@ class _TerminalGestureDetectorState extends State<TerminalGestureDetector> {
       rectangle: widget.settings.longPressSelectionShape == .rectangle,
       beginPress: _pressCell == null,
     );
+    unawaited(Feedback.forLongPress(context));
   }
 
   void _handleLongPressUp() => _endDrag();

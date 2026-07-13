@@ -119,6 +119,37 @@ void main() {
 
         expect(output, isEmpty);
       });
+
+      test('tracked scroll preserves the supplied pointer position', () {
+        writeUtf8(controller.terminal, '\x1b[?1049h\x1b[?1000h\x1b[?1006h');
+        binding.handleResize(
+          cols: 80,
+          rows: 24,
+          metrics: const CellMetrics(
+            cellWidth: 8,
+            cellHeight: 16,
+            baseline: 12,
+          ),
+          padding: EdgeInsets.zero,
+          devicePixelRatio: 1,
+        );
+        final output = <Uint8List>[];
+        controller.onOutput = output.add;
+
+        binding.handleScroll(1, localPosition: const Offset(24, 16));
+
+        expect(utf8.decode(output.single), '\x1b[<65;4;2M');
+      });
+
+      test('tracked scroll without a pointer position emits nothing', () {
+        writeUtf8(controller.terminal, '\x1b[?1049h\x1b[?1000h\x1b[?1006h');
+        final output = <Uint8List>[];
+        controller.onOutput = output.add;
+
+        binding.handleScroll(1);
+
+        expect(output, isEmpty);
+      });
     });
 
     group('selection drag', () {

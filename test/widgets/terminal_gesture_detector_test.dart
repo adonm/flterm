@@ -2,13 +2,15 @@
 library;
 
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flterm/src/foundation.dart';
 import 'package:flterm/src/links/link_settings.dart';
 import 'package:flterm/src/widgets.dart';
 import 'package:flterm/src/widgets/link_interaction.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libghostty/libghostty.dart'
@@ -403,6 +405,18 @@ void main() {
     testWidgets('touch long press starts normal selection by default', (
       tester,
     ) async {
+      final platformCalls = <MethodCall>[];
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            platformCalls.add(call);
+            return null;
+          });
+      addTearDown(() {
+        debugDefaultTargetPlatformOverride = null;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
       await tester.pumpWidget(buildHandler(controller: controller));
 
       final gesture = await tester.startGesture(const Offset(40, 16));
@@ -410,12 +424,17 @@ void main() {
       await tester.pump(const Duration(milliseconds: 550));
 
       expect(terminalFor(controller).selection, isNull);
+      expect(
+        platformCalls.where((call) => call.method == 'HapticFeedback.vibrate'),
+        hasLength(1),
+      );
 
       await gesture.moveTo(const Offset(80, 32));
       final sel = terminalFor(controller).selection!;
       expect(sel.mode, TerminalSelectionShape.normal);
 
       await gesture.up();
+      debugDefaultTargetPlatformOverride = null;
     });
 
     testWidgets('touch move cancels long press if distance exceeds threshold', (

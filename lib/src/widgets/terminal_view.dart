@@ -350,39 +350,45 @@ class _TerminalViewState extends State<TerminalView> {
                 onHover: _handleMouseHover,
                 onExit: _handleMouseExit,
                 cursor: _effectiveMouseCursor(),
-                child: Focus(
-                  focusNode: _focusNode,
-                  autofocus: widget.autofocus,
-                  onFocusChange: _handleFocusChange,
-                  child: TerminalGestureDetector(
-                    links: _links,
-                    metrics: _metrics,
-                    binding: _binding,
-                    visibleRows: _visibleRows,
-                    settings: widget.gestureSettings,
-                    scrollController: _scrollController,
-                    onLinkActivate: widget.linkSettings.onActivate,
-                    child: Scrollable(
-                      controller: _scrollController,
-                      physics: widget.scrollPhysics,
-                      viewportBuilder: (_, offset) => TerminalRenderer(
-                        key: _rendererKey,
-                        theme: _theme,
-                        offset: offset,
-                        metrics: _metrics,
-                        renderObserver: _controller,
-                        terminal: _binding.terminal,
-                        renderCache: cache,
-                        preeditText: _binding.preeditText,
-                        blinkVisible: _blinkVisible,
-                        linkSnapshot: _links.snapshot(),
-                        semanticsGeneration: _semanticsGeneration,
-                        onSemanticsText:
-                            SemanticsBinding.instance.semanticsEnabled &&
-                                widget.semanticsLabel != null
-                            ? _handleSemanticsText
-                            : null,
-                        onResize: _handleResize,
+                child: Listener(
+                  onPointerDown: _recordPointerPosition,
+                  onPointerMove: _recordPointerPosition,
+                  onPointerUp: _recordPointerPosition,
+                  onPointerSignal: _recordPointerPosition,
+                  child: Focus(
+                    focusNode: _focusNode,
+                    autofocus: widget.autofocus,
+                    onFocusChange: _handleFocusChange,
+                    child: TerminalGestureDetector(
+                      links: _links,
+                      metrics: _metrics,
+                      binding: _binding,
+                      visibleRows: _visibleRows,
+                      settings: widget.gestureSettings,
+                      scrollController: _scrollController,
+                      onLinkActivate: widget.linkSettings.onActivate,
+                      child: Scrollable(
+                        controller: _scrollController,
+                        physics: widget.scrollPhysics,
+                        viewportBuilder: (_, offset) => TerminalRenderer(
+                          key: _rendererKey,
+                          theme: _theme,
+                          offset: offset,
+                          metrics: _metrics,
+                          renderObserver: _controller,
+                          terminal: _binding.terminal,
+                          renderCache: cache,
+                          preeditText: _binding.preeditText,
+                          blinkVisible: _blinkVisible,
+                          linkSnapshot: _links.snapshot(),
+                          semanticsGeneration: _semanticsGeneration,
+                          onSemanticsText:
+                              SemanticsBinding.instance.semanticsEnabled &&
+                                  widget.semanticsLabel != null
+                              ? _handleSemanticsText
+                              : null,
+                          onResize: _handleResize,
+                        ),
                       ),
                     ),
                   ),
@@ -510,6 +516,10 @@ class _TerminalViewState extends State<TerminalView> {
     if (_mouseCursorHidden || _links.highlighted != previous) {
       setState(() => _mouseCursorHidden = false);
     }
+  }
+
+  void _recordPointerPosition(PointerEvent event) {
+    _lastPointerPosition = event.localPosition;
   }
 
   void _syncHoveredLink() {

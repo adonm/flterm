@@ -407,20 +407,20 @@ class TerminalControllerImpl extends TerminalController
     if (_activeScreen != .alternate || lines == 0) return;
 
     if (_mouseTracking != .none) {
+      if (localPosition == null) return;
       final button = lines < 0 ? MouseButton.four : MouseButton.five;
       final count = lines.abs();
 
       if (count > 0) _mouseEncoder.sync(terminal);
 
       for (var i = 0; i < count; i++) {
-        final position = localPosition ?? Offset.zero;
         _mouseEvent
           ..action = .press
           ..button = button
           ..mods = _currentMods()
           ..setPosition(
-            x: position.dx * _lastDevicePixelRatio,
-            y: position.dy * _lastDevicePixelRatio,
+            x: localPosition.dx * _lastDevicePixelRatio,
+            y: localPosition.dy * _lastDevicePixelRatio,
           );
         final result = _mouseEncoder.encode(_mouseEvent);
         if (result.isNotEmpty) _emitOutput(utf8.encode(result));

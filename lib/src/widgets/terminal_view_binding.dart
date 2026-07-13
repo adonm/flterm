@@ -66,7 +66,8 @@ abstract interface class TerminalViewBinding {
     required double devicePixelRatio,
   });
 
-  /// Reports scroll by line count.
+  /// Reports alternate-screen scrolling by line count. [localPosition] is
+  /// required when mouse tracking converts it into a terminal wheel report.
   void handleScroll(int lines, {Offset? localPosition});
 
   /// Applies a press selection gesture.

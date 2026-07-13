@@ -1353,6 +1353,59 @@ void main() {
       expect(find.byType(TerminalView), findsOneWidget);
     });
 
+    for (final kind in [PointerDeviceKind.touch, PointerDeviceKind.stylus]) {
+      testWidgets('$kind tracked scroll uses its latest pointer position', (
+        tester,
+      ) async {
+        final output = <Uint8List>[];
+        final scrollController = TerminalScrollController();
+        addTearDown(scrollController.dispose);
+        controller.onOutput = output.add;
+        await tester.pumpWidget(
+          wrapInApp(
+            controller: controller,
+            scrollController: scrollController,
+            autofocus: true,
+            showKeyboard: false,
+            width: 400,
+            height: 320,
+          ),
+        );
+        await tester.pumpAndSettle();
+        writeUtf8(controller, '\x1b[?1049h\x1b[?1000h\x1b[?1016h');
+        await tester.pump();
+        output.clear();
+
+        final topLeft = tester.getTopLeft(find.byType(TerminalView));
+        final gesture = await tester.startGesture(
+          topLeft + const Offset(120, 240),
+          kind: kind,
+        );
+        await gesture.moveTo(topLeft + const Offset(120, 120));
+        await tester.pump();
+        output.clear();
+
+        scrollController.jumpTo(scrollController.offset + 160);
+        await tester.pump();
+        await gesture.up();
+
+        final reports = utf8
+            .decode(
+              Uint8List.fromList(output.expand((bytes) => bytes).toList()),
+            )
+            .split('\x1b')
+            .where((report) => report.startsWith('[<65;'))
+            .toList();
+        expect(reports, isNotEmpty);
+        final expectedPixel = (120 * tester.view.devicePixelRatio).round();
+        expect(
+          reports,
+          contains(startsWith('[<65;$expectedPixel;${expectedPixel}M')),
+        );
+        expect(reports, everyElement(isNot(contains(';0;0M'))));
+      });
+    }
+
     testWidgets('selectAll via controller updates view', (tester) async {
       writeUtf8(controller, 'hello world');
       await tester.pumpWidget(
